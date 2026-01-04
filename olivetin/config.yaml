@@ -13,7 +13,7 @@ authLocalUsers:
   enabled: true
   users:
     - username: "admin"
-      password: "$2a$10$PcXa......................................" # bcrypt hash of your password
+      password: "$2a...(bcrypt hashed password)..."
       usergroup: "admins"
 
 # Access Control Lists (Permissions)
@@ -128,19 +128,4 @@ actions:
     arguments:
       - name: content
         type: raw_string_multiline
-        title: Paste JSON Content
-
-  # --- CONSOLE COMMANDS ---
-  - title: Send Command
-    icon: "&#128187;" # Terminal Icon
-    shell: |
-      echo "Sending command: /{{ cmd }}"
-      echo "-----------------------------------"
-      docker exec mc-server rcon-cli {{ cmd }}
-    popupOnStart: execution-dialog-stdout-only
-    arguments:
-      - name: cmd
-        title: Minecraft Command
-        type: ascii
-        default: list
-        description: Examples: 'list', 'weather clear', 'op User'
+        title: Paste JSON Content Here
