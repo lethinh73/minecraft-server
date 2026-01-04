@@ -1,0 +1,146 @@
+listenAddress: :1337
+logLevel: "INFO"
+
+# ========================================================
+# 1. AUTHENTICATION & SECURITY
+# ========================================================
+
+# Force unauthenticated users to login page
+authRequireGuestsToLogin: true
+
+# Define local users
+authLocalUsers:
+  enabled: true
+  users:
+    - username: "admin"
+      password: "$2a$10$PcXa......................................" # bcrypt hash of your password
+      usergroup: "admins"
+
+# Access Control Lists (Permissions)
+accessControlLists:
+  - name: "admins"
+    # Automatically apply this ACL to all actions
+    addToEveryAction: true
+    matchUsergroups:
+      - "admins"
+    permissions:
+      view: true   # Can see the buttons
+      exec: true   # Can click the buttons
+      logs: true   # Can view execution history
+
+# ========================================================
+# 2. ACTIONS (MINECRAFT SERVER)
+# ========================================================
+actions:
+  # --- STATUS & LOGS ---
+  - title: Check Server Status
+    icon: "&#128202;" # Chart Icon
+    shell: |
+      echo "Checking Connection..."
+      echo "-----------------------------------"
+      if docker ps | grep -q mc-server; then
+        echo "✅ STATUS: ONLINE"
+        echo "-----------------------------------"
+        # Display container info raw to avoid syntax errors
+        docker ps --filter "name=mc-server"
+      else
+        echo "⛔ STATUS: OFFLINE"
+        echo "The server is currently stopped."
+      fi
+    popupOnStart: execution-dialog-stdout-only
+
+  - title: View Live Logs
+    icon: "&#128220;" # Scroll Icon
+    shell: docker logs --tail 50 mc-server
+    popupOnStart: execution-dialog-stdout-only
+
+  # --- POWER CONTROLS ---
+  - title: Start Server
+    icon: "&#9654;" # Play Icon
+    shell: |
+      echo "Starting container..."
+      docker start mc-server
+      echo "Waiting for server to load..."
+      sleep 5
+      echo "✅ Done! Server is starting up."
+    popupOnStart: execution-dialog-stdout-only
+
+  - title: Stop Server
+    icon: "&#9209;" # Stop Icon
+    shell: |
+      echo "Stopping container..."
+      docker stop mc-server
+      echo "⛔ Server stopped."
+    popupOnStart: execution-dialog-stdout-only
+
+  - title: Restart Server
+    icon: "&#128260;" # Refresh Icon
+    shell: |
+      echo "Rebooting container..."
+      docker restart mc-server
+      echo "✅ Restart command sent."
+    popupOnStart: execution-dialog-stdout-only
+
+  # --- CONFIGURATION MANAGEMENT ---
+  - title: View Config (Read Only)
+    icon: "&#128065;" # Eye Icon
+    shell: |
+      echo "Reading /data/server.properties..."
+      echo "------------------------------------------------"
+      docker exec mc-server cat server.properties
+    popupOnStart: execution-dialog-stdout-only
+
+  - title: Edit Config (Write)
+    icon: "&#128190;" # Save Icon
+    shell: |
+      echo "Overwriting server.properties..."
+      # Use tee to write content into the container file
+      echo "{{ content }}" | docker exec -i mc-server tee server.properties > /dev/null
+      echo "✅ File saved successfully!"
+      echo "⚠️  IMPORTANT: You must RESTART the server for changes to apply."
+    popupOnStart: execution-dialog-stdout-only
+    arguments:
+      - name: content
+        type: raw_string_multiline
+        title: Paste Content Here
+        description: Copy from 'View Config', paste here, edit, then run.
+
+  # --- PERMISSIONS MANAGEMENT ---
+  - title: View Permissions (Read Only)
+    icon: "&#128274;" # Lock Icon
+    shell: |
+      echo "Reading /data/permissions.json..."
+      echo "------------------------------------------------"
+      docker exec mc-server cat permissions.json
+    popupOnStart: execution-dialog-stdout-only
+
+  - title: Edit Permissions (Write)
+    icon: "&#9999;" # Pencil Icon
+    shell: |
+      echo "Overwriting permissions.json..."
+      echo "{{ content }}" | docker exec -i mc-server tee permissions.json > /dev/null
+      
+      # Reload allowlist in-game immediately
+      echo "Reloading server allowlist..."
+      docker exec mc-server allowlist reload
+      echo "✅ Permissions updated and reloaded!"
+    popupOnStart: execution-dialog-stdout-only
+    arguments:
+      - name: content
+        type: raw_string_multiline
+        title: Paste JSON Content
+
+  # --- CONSOLE COMMANDS ---
+  - title: Send Command
+    icon: "&#128187;" # Terminal Icon
+    shell: |
+      echo "Sending command: /{{ cmd }}"
+      echo "-----------------------------------"
+      docker exec mc-server rcon-cli {{ cmd }}
+    popupOnStart: execution-dialog-stdout-only
+    arguments:
+      - name: cmd
+        title: Minecraft Command
+        type: ascii
+        default: list
+        description: Examples: 'list', 'weather clear', 'op User'
