@@ -11,14 +11,3 @@ services:
       - ./minecraft-data:/data
     stdin_open: true
     tty: true
-
-  # --- 2. OLIVETIN (Web Panel) ---
-  olivetin:
-    image: jamesread/olivetin:latest
-    container_name: olivetin
-    restart: unless-stopped
-    ports:
-      - "1337:1337"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./olivetin-config:/config
