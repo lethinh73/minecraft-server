@@ -13,7 +13,7 @@ authLocalUsers:
   enabled: true
   users:
     - username: "admin"
-      password: "$2a...(bcrypt hashed password)..."
+      password: "$....." # Replace with your hashed password
       usergroup: "admins"
 
 # Access Control Lists (Permissions)
@@ -92,18 +92,20 @@ actions:
 
   - title: Edit Config (Write)
     icon: "&#128190;" # Save Icon
-    shell: |
-      echo "Overwriting server.properties..."
-      # Use tee to write content into the container file
-      echo "{{ content }}" | docker exec -i mc-server tee server.properties > /dev/null
-      echo "✅ File saved successfully!"
-      echo "⚠️  IMPORTANT: You must RESTART the server for changes to apply."
+    exec:
+      - sh
+      - -c
+      - |
+        printf '%s' "$1" | docker exec -i mc-server tee server.properties > /dev/null
+        echo "✅ Config saved successfully!"
+        echo "⚠️  You must RESTART the server for changes to apply."
+      - --
+      - "{{ content }}"
     popupOnStart: execution-dialog-stdout-only
     arguments:
       - name: content
         type: raw_string_multiline
         title: Paste Content Here
-        description: Copy from 'View Config', paste here, edit, then run.
 
   # --- PERMISSIONS MANAGEMENT ---
   - title: View Permissions (Read Only)
@@ -116,14 +118,16 @@ actions:
 
   - title: Edit Permissions (Write)
     icon: "&#9999;" # Pencil Icon
-    shell: |
-      echo "Overwriting permissions.json..."
-      echo "{{ content }}" | docker exec -i mc-server tee permissions.json > /dev/null
-      
-      # Reload allowlist in-game immediately
-      echo "Reloading server allowlist..."
-      docker exec mc-server allowlist reload
-      echo "✅ Permissions updated and reloaded!"
+    exec:
+      - sh
+      - -c
+      - |
+        printf '%s' "$1" | docker exec -i mc-server tee permissions.json > /dev/null
+        echo "Reloading server allowlist..."
+        docker exec mc-server allowlist reload
+        echo "✅ Permissions updated and reloaded!"
+      - --
+      - "{{ content }}"
     popupOnStart: execution-dialog-stdout-only
     arguments:
       - name: content
